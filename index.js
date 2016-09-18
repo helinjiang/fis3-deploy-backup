@@ -1,9 +1,16 @@
 'use strict';
 
-var path = require('path'),
-    fs = require('fs'),
-    noop = new Function();
-
+/**
+ * deploy 插件接口
+ *
+ * http://fis.baidu.com/fis3/api/index.html
+ *
+ * @param  {Object}   opts  插件配置
+ * @param  {Object}   modified 修改了的文件列表（对应watch功能）
+ * @param  {Object}   total    所有文件列表
+ * @param  {Function} next     调用下一个插件
+ * @return {undefined}
+ */
 var entry = module.exports = function (opts, modified, total, next) {
 
     total.filter(function (file) {
@@ -15,43 +22,19 @@ var entry = module.exports = function (opts, modified, total, next) {
             content: opts.content(file)
         };
     }).forEach(function (file) {
-        fis.util.write(projectPath(opts.savePath, file.subpath), file.content);
+        fis.util.write(projectPath(opts.to, file.subpath), file.content);
     });
 
     next();
-
-    // TODO 使用增量打包，放到next()之前
-    // 生成zip文件应该在所有文件写入tmp文件夹之后
-    // pack(opts.type, projectPath(opts.tmp), projectPath(opts.to));
 };
 
 function projectPath() {
     return fis.project.getProjectPath(fis.util.apply(fis.util, arguments));
 }
 
-// var pack = function(type, dir, output) {
-//     var archive = archiver(type)
-//         .bulk([{
-//             expand: true,
-//             cwd: dir,
-//             src: ['**', '!' + output.replace(dir, '').replace(/^\//, '')]
-//         }])
-//         .on('error', function() {
-//             fis.log.error('zip failed: ' + output);
-//         });
-//
-//     fis.util.mkdir(path.dirname(output));
-//     archive.pipe(fs.createWriteStream(output));
-//     archive.finalize();
-//
-//     // TODO 增量打包时remove
-//     pack = noop;
-// };
-
 entry.options = {
     cdnPath: '',
     serverPath: '',
-    savePath: '../public/webserver/retry/',
     packDomain: true, // 是否打包所有包含domain属性的文件
 
     // 文件在retry中的路径
