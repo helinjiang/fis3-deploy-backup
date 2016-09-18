@@ -4,17 +4,17 @@ var path = require('path'),
     fs = require('fs'),
     noop = new Function();
 
-var entry = module.exports = function(opts, modified, total, next) {
+var entry = module.exports = function (opts, modified, total, next) {
 
-    total.filter(function(file) {
+    total.filter(function (file) {
         return (opts.packDomain && file.domain && file.pack !== false)
             || file.pack;
-    }).map(function(file) {
+    }).map(function (file) {
         return {
             subpath: opts.subpath(file),
             content: opts.content(file)
         };
-    }).forEach(function(file) {
+    }).forEach(function (file) {
         fis.util.write(projectPath(opts.savePath, file.subpath), file.content);
     });
 
@@ -28,7 +28,6 @@ var entry = module.exports = function(opts, modified, total, next) {
 function projectPath() {
     return fis.project.getProjectPath(fis.util.apply(fis.util, arguments));
 }
-
 
 // var pack = function(type, dir, output) {
 //     var archive = archiver(type)
@@ -50,28 +49,42 @@ function projectPath() {
 // };
 
 entry.options = {
-    savePath:'../public/webserver/retry/',
+    cdnPath: '',
+    serverPath: '',
+    savePath: '../public/webserver/retry/',
     packDomain: true, // 是否打包所有包含domain属性的文件
 
-    // 文件在压缩包中的路径
-    subpath: function(file) {
+    // 文件在retry中的路径
+    subpath: function (file) {
         return typeof file.pack === 'string' ? file.pack : fis.util(
-            // (file.domain || '').replace(/^http:\/\//i, ''),
             file.getHashRelease()
         );
     },
 
     // 文件内容
-    content: function(file) {
+    content: function (file) {
         var inject = {
-            version: Date.now()
-        };
-        return !file. _likes || !file. _likes.isHtmlLike
-            ? file.getContent()
-            : (file.getContent() || '').replace(
-            /(<script)/,
-            '<script>var pack = ' + JSON.stringify(inject) + '</script>$1'
-        );
+                version: Date.now()
+            },
+            fileContent = file.getContent() || '';
+
+        if (!file._likes || !file._likes.isHtmlLike) {
+            return fileContent;
+        } else {
+            if (this.cdnPath) {
+                fileContent = fileContent.replace(
+                    new RegExp(this.cdnPath, 'gi'),
+                    this.serverPath
+                );
+            }
+
+            fileContent = fileContent.replace(
+                /(<script)/,
+                '<script>var _retry = ' + JSON.stringify(inject) + '</script>$1'
+            );
+
+            return fileContent;
+        }
     }
 };
 
